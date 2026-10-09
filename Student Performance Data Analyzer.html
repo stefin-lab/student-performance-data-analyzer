@@ -1,0 +1,70 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Student Performance Data Analyzer</title><style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f4f6fb;--card:#fff;--ink:#1d2433;--mut:#6a7389;--line:#e4e8f1;--acc:#c2410c;--track:#e9edf5;--bar:#f0a35e;--okb:#e3f6ea;--ok:#1b8a4b;--bad:#c0392b}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1524;--card:#18203a;--ink:#e8ecf8;--mut:#9aa4c4;--line:#2a3354;--acc:#fdba74;--track:#263150;--bar:#f0a35e;--okb:#12372a;--ok:#5fd08f;--bad:#ff8b7e}}
+:root[data-theme="dark"]{--bg:#0f1524;--card:#18203a;--ink:#e8ecf8;--mut:#9aa4c4;--line:#2a3354;--acc:#fdba74;--track:#263150;--bar:#f0a35e;--okb:#12372a;--ok:#5fd08f;--bad:#ff8b7e}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Segoe UI,Arial,sans-serif}
+header{background:linear-gradient(120deg,#c2410c,#ea7a2e);color:#fff;padding:24px 16px}
+.w{max-width:1100px;margin:0 auto;padding:0 16px}header .w{padding:0}h1{margin:0 0 6px;font-size:26px}header p{margin:0;opacity:.92;font-size:14px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.tag{background:var(--okb);color:var(--ok);border-radius:8px;padding:6px 10px;font-size:13px}
+.btn,.tb{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 12px;font:600 13px inherit;font-family:inherit;cursor:pointer}
+@media(prefers-color-scheme:dark){.btn,.tb{color:#10131f}}
+.btn.s,.tb{background:var(--card);color:var(--acc);border:1px solid var(--line)}.tb.a{background:var(--acc);color:#fff;border-color:var(--acc)}
+@media(prefers-color-scheme:dark){.tb.a{color:#10131f}}
+input[type=file]{display:none}.err{color:var(--bad);font-size:13px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+input,select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;max-width:100%}
+label.l{display:block;font-size:12px;font-weight:700;color:var(--mut);margin:10px 0 4px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.c{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}.k .c{margin:0}
+.k span{display:block;color:var(--mut);font-size:12px;text-transform:uppercase;font-weight:700}.k strong{display:block;font-size:24px;margin-top:6px;color:var(--acc)}
+h2{font-size:16px;margin:0 0 12px;color:var(--acc)}.g{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mut{color:var(--mut);font-size:13px}.sc{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-size:12px;text-transform:uppercase}td.n,th.n{text-align:right}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;font:13px Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0 0;max-height:360px;overflow:auto}
+svg{width:100%;height:auto;display:block}svg text{fill:var(--mut);font-size:11px}
+@media(max-width:760px){.g{grid-template-columns:1fr}}
+</style></head><body><header><div class="w"><h1>📊 Student Performance Data Analyzer</h1><p>Data frame, grade frequency, factor summary and mathematical operations on marks</p></div></header><main class="w">
+<div class="bar"><span class="tag" id="tag" style="background:#fff3cd;color:#664d03">Sample data (illustrative), not your students.csv</span><label class="btn" for="f">Upload students.csv</label><input id="f" type="file" accept=".csv"><span class="mut">Needs Marks and Grade columns (Age optional)</span><span class="err" id="err"></span></div>
+<div class="k" id="k"></div>
+<div class="g"><div class="c"><h2>Grade Summary (factor levels A to F)</h2><div id="ch"></div></div><div class="c"><h2>Grade Frequency Table</h2><div class="sc" id="ft"></div><p class="mut">table() lists only the grades that occur. The factor summary on the left also shows levels with zero students.</p></div></div>
+<div class="c"><h2>Data Frame</h2><div class="tabs" id="tabs"></div><p class="mut" id="note"></p><div class="sc" id="dt"></div></div>
+</main><script>
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?"":s).replace(/[&<>]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;"}[c]})}
+function fm(x,d){return Number(x).toLocaleString("en-IN",{minimumFractionDigits:d,maximumFractionDigits:d})}
+function g7(x){return parseFloat(Number(x).toPrecision(7))}
+function csv(t){var L=t.replace(/\r/g,"").split("\n").filter(function(l){return l.trim()});if(!L.length)throw new Error("The CSV file is empty.");
+ function sp(l){var o=[],c="",q=0,i,ch;for(i=0;i<l.length;i++){ch=l[i];if(ch=='"'){if(q&&l[i+1]=='"'){c+='"';i++}else q=!q}else if(ch==","&&!q){o.push(c.trim());c=""}else c+=ch}o.push(c.trim());return o}
+ return{h:sp(L[0]),r:L.slice(1).map(sp)}}
+function tbl(h,rows,nc){nc=nc||[];return"<table><thead><tr>"+h.map(function(x,i){return"<th"+(nc.indexOf(i)>-1?" class='n'":"")+">"+esc(x)+"</th>"}).join("")+"</tr></thead><tbody>"+rows.map(function(r){return"<tr>"+r.map(function(c,i){return"<td"+(nc.indexOf(i)>-1?" class='n'":"")+">"+esc(c)+"</td>"}).join("")+"</tr>"}).join("")+"</tbody></table>"}
+function kpis(a){$("k").innerHTML=a.map(function(x){return"<div class='c'><span>"+x[0]+"</span><strong>"+esc(x[1])+"</strong></div>"}).join("")}
+function vbar(el,lab,val,o){o=o||{};var f=o.fmt||function(v){return v},mx=Math.max.apply(null,val.concat([1])),st=o.step||(mx>500?100:mx>200?50:mx>100?20:mx>50?10:mx>20?5:mx>10?2:1),top=o.max||Math.ceil(mx/st)*st,n=val.length,rot=n>8,W=720,H=o.h||300,L=44,B=rot?80:32,T=16,pw=W-L-10,ph=H-B-T,s=pw/n,bw=Math.min(s*.7,64),out="",v,y;
+ for(v=0;v<=top;v+=st){y=T+ph-v/top*ph;out+="<line x1='"+L+"' x2='"+(W-10)+"' y1='"+y+"' y2='"+y+"' stroke='var(--line)'/><text x='"+(L-6)+"' y='"+(y+4)+"' text-anchor='end'>"+v+"</text>"}
+ val.forEach(function(v,i){var h=v/top*ph,x=L+i*s+(s-bw)/2,c=o.col?o.col[i%o.col.length]:"var(--bar)";y=T+ph-h;
+  out+="<rect x='"+x+"' y='"+y+"' width='"+bw+"' height='"+h+"' rx='3' fill='"+c+"'><title>"+esc(lab[i])+": "+f(v)+"</title></rect><text x='"+(x+bw/2)+"' y='"+(y-4)+"' text-anchor='middle'>"+f(v)+"</text>"+(rot?"<text transform='translate("+(x+bw/2+4)+","+(T+ph+8)+") rotate(-90)' text-anchor='end'>"+esc(lab[i])+"</text>":"<text x='"+(x+bw/2)+"' y='"+(T+ph+18)+"' text-anchor='middle'>"+esc(lab[i])+"</text>")});
+ el.innerHTML="<svg viewBox='0 0 "+W+" "+H+"' role='img'>"+out+"</svg>"}
+function wire(cb){$("f").addEventListener("change",function(e){var f=e.target.files[0];$("err").textContent="";if(!f)return;var rd=new FileReader();rd.onload=function(){try{cb(rd.result);$("tag").textContent="Showing: "+f.name}catch(x){$("err").textContent=x.message}};rd.readAsText(f)})}
+
+var H0=["Name","Age","Marks","Grade","Department"],S0=[["Arun",20,85,"B","AI&DS"],["Priya",19,92,"A","CSE"],["Karthik",21,67,"C","IT"],["Divya",20,45,"D","AI&DS"],["Santhosh",22,32,"F","ECE"],["Meena",19,88,"B","CSE"],["Rahul",21,76,"B","IT"],["Anu",20,95,"A","AI&DS"],["Vijay",22,56,"D","ECE"],["Keerthana",19,98,"A","CSE"]];
+var H=H0,R=S0,view="orig",LV=["A","B","C","D","F"],MC=["LogMarks","SquareRootMarks","MarksCeiling","MarksFloor","RoundedMarks"];
+var VW=[["orig","1. Original data"],["math","2. With math operations"],["row","3. After deleting 2nd row"],["age","4. After deleting Age column"]],NOTE={orig:"Data frame as read from the CSV.",math:"Adds log(), sqrt(), ceiling(), floor() and round(, 1) of Marks.",row:"students[-2, ] removes the second row; original row numbers are kept.",age:"Also removes the Age column (when the file has one)."};
+function setData(h,r){var mi=h.indexOf("Marks"),gi=h.indexOf("Grade");if(mi<0||gi<0)throw new Error("Missing required CSV column(s): "+["Marks","Grade"].filter(function(c){return h.indexOf(c)<0}).join(", "));
+ if(!r.length)throw new Error("The CSV contains no records.");r.forEach(function(x){while(x.length<h.length)x.push("");x[mi]=Number(x[mi])});
+ if(r.some(function(x){return isNaN(x[mi])}))throw new Error("Marks must be numeric.");H=h;R=r;render()}
+function render(){var mi=H.indexOf("Marks"),gi=H.indexOf("Grade"),M=R.map(function(r){return r[mi]}),n=M.length,sum=M.reduce(function(a,b){return a+b},0),cnt={};
+ kpis([["Total Students",n],["Total Columns",H.length],["Average Marks",g7(Math.round(sum/n*100)/100)],["Highest Marks",Math.max.apply(null,M)],["Lowest Marks",Math.min.apply(null,M)],["Scoring 80 or Above",M.filter(function(m){return m>=80}).length]]);
+ R.forEach(function(r){cnt[r[gi]]=(cnt[r[gi]]||0)+1});
+ vbar($("ch"),LV,LV.map(function(l){return cnt[l]||0}),{col:["#2e9d63","#3b82c4","#e0a030","#e07a30","#d1604d"],h:260});
+ var pr=Object.keys(cnt).sort();$("ft").innerHTML="<p class='mut' style='margin:0 0 6px'>Categories</p>"+tbl(pr,[pr.map(function(k){return cnt[k]})],pr.map(function(x,i){return i}));
+ $("tabs").innerHTML=VW.map(function(t){return"<button class='tb"+(t[0]==view?" a":"")+"' onclick=\"view='"+t[0]+"';render()\">"+t[1]+"</button>"}).join("");
+ $("note").textContent=NOTE[view];
+ var hh=["#"].concat(H),ai=H.indexOf("Age"),rows=R.map(function(r,i){var m=r[mi],ex=view=="orig"?[]:[g7(Math.log(m)),g7(Math.sqrt(m)),Math.ceil(m),Math.floor(m),Math.round(m*10)/10];return[i+1].concat(r,ex)});
+ if(view!="orig")hh=hh.concat(MC);
+ if(view=="row"||view=="age")rows=rows.filter(function(r,i){return i!=1});
+ if(view=="age"&&ai>=0){var k=hh.indexOf("Age");hh.splice(k,1);rows=rows.map(function(r){var c=r.slice();c.splice(k,1);return c})}
+ var nc=[];hh.forEach(function(c,i){if(c=="#"||c=="Age"||c=="Marks"||MC.indexOf(c)>-1)nc.push(i)});
+ $("dt").innerHTML=tbl(hh,rows,nc)}
+wire(function(t){var d=csv(t);setData(d.h,d.r)});render();
+</script></body></html>
